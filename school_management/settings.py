@@ -7,7 +7,6 @@
 # from decouple import config
 # import dj_database_url
 # import warnings
-# from rest_framework.fields import DecimalField
 
 # BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -49,7 +48,7 @@
 
 # MIDDLEWARE = [
 #     'django.middleware.security.SecurityMiddleware',
-#     'whitenoise.middleware.WhiteNoiseMiddleware',  # For static files
+#     'whitenoise.middleware.WhiteNoiseMiddleware',
 #     'corsheaders.middleware.CorsMiddleware',
 #     'django.contrib.sessions.middleware.SessionMiddleware',
 #     'django.middleware.common.CommonMiddleware',
@@ -91,25 +90,25 @@
 # }
 
 # # ==============================================================================
-# # PASSWORD VALIDATION
+# # PASSWORD VALIDATION - SIMPLE (min 5 characters)
 # # ==============================================================================
 # AUTH_PASSWORD_VALIDATORS = [
-#     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
-#     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator', 'OPTIONS': {'min_length': 8}},
-#     {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
-#     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
+#     {
+#         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+#         'OPTIONS': {'min_length': 5}
+#     },
 # ]
 
 # # ==============================================================================
 # # INTERNATIONALIZATION
 # # ==============================================================================
 # LANGUAGE_CODE = 'en-us'
-# TIME_ZONE = 'UTC'
+# TIME_ZONE = 'Africa/Lagos'  # Nigeria time
 # USE_I18N = True
 # USE_TZ = True
 
 # # ==============================================================================
-# # STATIC & MEDIA FILES (with WhiteNoise)
+# # STATIC & MEDIA FILES
 # # ==============================================================================
 # STATIC_URL = '/static/'
 # STATIC_ROOT = BASE_DIR / 'staticfiles'
@@ -118,6 +117,10 @@
 
 # MEDIA_URL = '/media/'
 # MEDIA_ROOT = BASE_DIR / 'media'
+
+# # Ensure these directories exist
+# os.makedirs(STATIC_ROOT, exist_ok=True)
+# os.makedirs(MEDIA_ROOT, exist_ok=True)
 
 # # File upload limits
 # DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
@@ -130,7 +133,7 @@
 # AUTH_USER_MODEL = 'users.User'
 
 # # ==============================================================================
-# # JWT SETTINGS - Production Tuned
+# # JWT SETTINGS
 # # ==============================================================================
 # SIMPLE_JWT = {
 #     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
@@ -149,18 +152,18 @@
 # # EMAIL - Production
 # # ==============================================================================
 # EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-# EMAIL_HOST = config('EMAIL_HOST')
-# EMAIL_PORT = config('EMAIL_PORT', cast=int)
-# EMAIL_USE_TLS = config('EMAIL_USE_TLS', cast=bool)
-# EMAIL_HOST_USER = config('EMAIL_HOST_USER')
-# EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
-# DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL')
+# EMAIL_HOST = config('EMAIL_HOST', default='smtp.gmail.com')
+# EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
+# EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
+# EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
+# EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
+# DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@concordts.com')
 
 # # ==============================================================================
 # # CORS - Production
 # # ==============================================================================
 # CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', cast=lambda v: [s.strip() for s in v.split(',')])
-# CORS_ALLOW_CREDENTIALS = config('CORS_ALLOW_CREDENTIALS', cast=bool, default=True)
+# CORS_ALLOW_CREDENTIALS = config('CORS_ALLOW_CREDENTIALS', default=True, cast=bool)
 # CORS_ALLOW_HEADERS = [
 #     'content-type',
 #     'authorization',
@@ -198,6 +201,9 @@
 # # ==============================================================================
 # # LOGGING
 # # ==============================================================================
+# LOGS_DIR = BASE_DIR / 'logs'
+# os.makedirs(LOGS_DIR, exist_ok=True)
+
 # LOGGING = {
 #     'version': 1,
 #     'disable_existing_loggers': False,
@@ -216,7 +222,7 @@
 #         'file': {
 #             'level': 'WARNING',
 #             'class': 'logging.FileHandler',
-#             'filename': BASE_DIR / 'logs' / 'django.log',
+#             'filename': LOGS_DIR / 'django.log',
 #             'formatter': 'verbose'
 #         },
 #     },
@@ -237,21 +243,15 @@
 # # ==============================================================================
 # # FRONTEND & SCHOOL INFO
 # # ==============================================================================
-# FRONTEND_URL = config('FRONTEND_URL')
-# SCHOOL_NAME = config('SCHOOL_NAME')
-# SCHOOL_ADDRESS = config('SCHOOL_ADDRESS')
-# SCHOOL_PHONE = config('SCHOOL_PHONE')
+# FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:5173')
+# SCHOOL_NAME = config('SCHOOL_NAME', default='ConcordTS')
+# SCHOOL_ADDRESS = config('SCHOOL_ADDRESS', default='')
+# SCHOOL_PHONE = config('SCHOOL_PHONE', default='')
 
-
-
-# # Filter out the specific DecimalField warnings
-# warnings.filterwarnings(
-#     'ignore',
-#     category=UserWarning,
-#     module='rest_framework.fields',
-#     message='.*should be a Decimal instance.*'
-# )
-
+# # ==============================================================================
+# # SUPPRESS WARNINGS
+# # ==============================================================================
+# warnings.filterwarnings('ignore', category=UserWarning, module='rest_framework.fields')
 
 """
 Django production settings for school_management project.
@@ -288,7 +288,8 @@ INSTALLED_APPS = [
     'corsheaders',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
-    'drf_yasg',
+    'drf_spectacular',
+    'drf_spectacular_sidecar',
     'django_filters',
     
     # Local apps
@@ -450,7 +451,23 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         'anon': '100/day',
         'user': '1000/day'
-    }
+    },
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+# ==============================================================================
+# DRF SPECTACULAR (API Documentation)
+# ==============================================================================
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'ConcordTS School Management API',
+    'DESCRIPTION': 'Comprehensive school management system API',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'SWAGGER_UI_DIST': 'SIDECAR',  # Use sidecar for static files
+    'SWAGGER_UI_FAVICON_HREF': 'SIDECAR',
+    'REDOC_DIST': 'SIDECAR',
+    'COMPONENT_SPLIT_REQUEST': True,
+    'SCHEMA_PATH_PREFIX': '/api/',
 }
 
 # ==============================================================================

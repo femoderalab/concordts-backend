@@ -2,7 +2,7 @@ services:
   - type: web
     name: concordts-backend
     runtime: python
-    buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput
+    buildCommand: .render-build.bat
     startCommand: gunicorn school_management.wsgi:application
     envVars:
       - key: SECRET_KEY
