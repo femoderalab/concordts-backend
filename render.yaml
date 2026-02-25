@@ -13,13 +13,13 @@ services:
       - key: DEBUG
         value: false
       - key: ALLOWED_HOSTS
-        value: .onrender.com,concordts.com,www.concordts.com
+        value: .onrender.com,concordts-backend.onrender.com,localhost,127.0.0.1,yourdomain.com,www.yourdomain.com
       - key: DATABASE_URL
         fromDatabase:
           name: concordts-db
           property: connectionString
       - key: CORS_ALLOWED_ORIGINS
-        value: https://concordts-frontend.vercel.app,https://concordts.com
+        value: https://concordts-frontend-9m2hyfafj-femoderalab-3673s-projects.vercel.app,http://localhost:5173,http://localhost:3000,https://yourdomain.com,https://www.yourdomain.com
       - key: CORS_ALLOW_CREDENTIALS
         value: true
       - key: EMAIL_HOST
@@ -35,7 +35,7 @@ services:
       - key: DEFAULT_FROM_EMAIL
         value: ConcordTS <noreply@concordts.com>
       - key: FRONTEND_URL
-        value: https://concordts.com
+        value: https://concordts-frontend-9m2hyfafj-femoderalab-3673s-projects.vercel.app
       - key: SCHOOL_NAME
         value: ConcordTS
       - key: SCHOOL_ADDRESS
