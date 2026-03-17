@@ -787,7 +787,7 @@ class StudentViewSet(viewsets.ViewSet):
                 }
                 
                 # Fields that can't be NULL in database
-                user_not_null = ['address', 'city', 'lga', 'nationality']
+                user_not_null = ['address', 'city', 'lga', 'nationality', 'phone_number']
                 
                 user_updated = False
                 
