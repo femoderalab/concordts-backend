@@ -112,52 +112,83 @@ class StudentSerializer(serializers.ModelSerializer):
             'user_phone', 'user_gender'
         ]
     
+    # def get_student_image_url(self, obj):
+    #     """Get absolute URL for student image"""
+    #     if obj.student_image and hasattr(obj.student_image, 'url'):
+    #         request = self.context.get('request')
+    #         if request:
+    #             return request.build_absolute_uri(obj.student_image.url)
+    #         return obj.student_image.url
+    #     return None
+    
+    # def get_birth_certificate_url(self, obj):
+    #     if obj.birth_certificate and hasattr(obj.birth_certificate, 'url'):
+    #         request = self.context.get('request')
+    #         if request:
+    #             return request.build_absolute_uri(obj.birth_certificate.url)
+    #         return obj.birth_certificate.url
+    #     return None
+    
+    # def get_immunization_record_url(self, obj):
+    #     if obj.immunization_record and hasattr(obj.immunization_record, 'url'):
+    #         request = self.context.get('request')
+    #         if request:
+    #             return request.build_absolute_uri(obj.immunization_record.url)
+    #         return obj.immunization_record.url
+    #     return None
+    
+    # def get_previous_school_report_url(self, obj):
+    #     if obj.previous_school_report and hasattr(obj.previous_school_report, 'url'):
+    #         request = self.context.get('request')
+    #         if request:
+    #             return request.build_absolute_uri(obj.previous_school_report.url)
+    #         return obj.previous_school_report.url
+    #     return None
+    
+    # def get_parent_id_copy_url(self, obj):
+    #     if obj.parent_id_copy and hasattr(obj.parent_id_copy, 'url'):
+    #         request = self.context.get('request')
+    #         if request:
+    #             return request.build_absolute_uri(obj.parent_id_copy.url)
+    #         return obj.parent_id_copy.url
+    #     return None
+    
+    # def get_fee_payment_evidence_url(self, obj):
+    #     if obj.fee_payment_evidence and hasattr(obj.fee_payment_evidence, 'url'):
+    #         request = self.context.get('request')
+    #         if request:
+    #             return request.build_absolute_uri(obj.fee_payment_evidence.url)
+    #         return obj.fee_payment_evidence.url
+    #     return None
+    
     def get_student_image_url(self, obj):
         """Get absolute URL for student image"""
         if obj.student_image and hasattr(obj.student_image, 'url'):
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(obj.student_image.url)
             return obj.student_image.url
         return None
-    
+
     def get_birth_certificate_url(self, obj):
         if obj.birth_certificate and hasattr(obj.birth_certificate, 'url'):
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(obj.birth_certificate.url)
             return obj.birth_certificate.url
         return None
-    
+
     def get_immunization_record_url(self, obj):
         if obj.immunization_record and hasattr(obj.immunization_record, 'url'):
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(obj.immunization_record.url)
             return obj.immunization_record.url
         return None
-    
+
     def get_previous_school_report_url(self, obj):
         if obj.previous_school_report and hasattr(obj.previous_school_report, 'url'):
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(obj.previous_school_report.url)
             return obj.previous_school_report.url
         return None
-    
+
     def get_parent_id_copy_url(self, obj):
         if obj.parent_id_copy and hasattr(obj.parent_id_copy, 'url'):
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(obj.parent_id_copy.url)
             return obj.parent_id_copy.url
         return None
-    
+
     def get_fee_payment_evidence_url(self, obj):
         if obj.fee_payment_evidence and hasattr(obj.fee_payment_evidence, 'url'):
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(obj.fee_payment_evidence.url)
             return obj.fee_payment_evidence.url
         return None
     

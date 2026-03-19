@@ -210,6 +210,8 @@ class UserProfileSerializer(serializers.ModelSerializer):
     gender_display = serializers.CharField(source='get_gender_display', read_only=True)
     state_of_origin_display = serializers.CharField(source='get_state_of_origin_display', read_only=True)
     full_name = serializers.SerializerMethodField(read_only=True)
+    
+    profile_picture = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -231,6 +233,11 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
     def get_full_name(self, obj):
         return obj.get_full_name()
+    
+    def get_profile_picture(self, obj):
+        if obj.profile_picture and hasattr(obj.profile_picture, 'url'):
+            return obj.profile_picture.url  # Cloudinary returns full URL
+        return None
 
 
 class ChangePasswordSerializer(serializers.Serializer):

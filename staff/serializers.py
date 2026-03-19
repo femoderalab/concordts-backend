@@ -215,7 +215,8 @@ class StaffSerializer(serializers.ModelSerializer):
             'role': user.role,
             'role_display': user.get_role_display() if user.role else None,
             'is_active': user.is_active,
-            'profile_picture': user.profile_picture.url if user.profile_picture else None,
+            # 'profile_picture': user.profile_picture.url if user.profile_picture else None,
+            'profile_picture': user.profile_picture.url if user.profile_picture and hasattr(user.profile_picture, 'url') else None,
         }
 
 # =====================
