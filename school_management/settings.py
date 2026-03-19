@@ -7,7 +7,6 @@ from datetime import timedelta
 from decouple import config
 import dj_database_url
 import warnings
-import cloudinary
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -51,7 +50,6 @@ INSTALLED_APPS = [
     'academic',
 ]
 
-# Cloudinary config
 CLOUDINARY_STORAGE = {
     'CLOUD_NAME': config('CLOUDINARY_CLOUD_NAME'),
     'API_KEY': config('CLOUDINARY_API_KEY'),
@@ -60,6 +58,14 @@ CLOUDINARY_STORAGE = {
 
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
+# Explicitly configure cloudinary with credentials
+import cloudinary
+cloudinary.config(
+    cloud_name=config('CLOUDINARY_CLOUD_NAME'),
+    api_key=config('CLOUDINARY_API_KEY'),
+    api_secret=config('CLOUDINARY_API_SECRET'),
+    secure=True
+)
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',  
