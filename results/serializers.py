@@ -358,6 +358,13 @@ class StudentResultSerializer(serializers.ModelSerializer):
     psychomotor_skills = PsychomotorSkillsSerializer(read_only=True)
     affective_domains = AffectiveDomainsSerializer(read_only=True)
     
+    subject_scores_data = serializers.ListField(
+    child=serializers.DictField(),
+    write_only=True,
+    required=False,
+    source='subject_scores'
+)
+    
     # Calculated fields
     attendance_percentage = serializers.SerializerMethodField(read_only=True)
     is_promotion_recommended = serializers.SerializerMethodField(read_only=True)
@@ -467,37 +474,237 @@ class StudentResultSerializer(serializers.ModelSerializer):
         return data
     
     def create(self, validated_data):
-        """Create a new student result"""
-        # Set created_by user from request context
+        """Create a new student result with nested data"""
         request = self.context.get('request')
+        
+        # Extract nested data from request directly (since fields are read_only)
+        raw_data = request.data if request else {}
+        subject_scores_data = raw_data.get('subject_scores', [])
+        psychomotor_data = raw_data.get('psychomotor_skills', {})
+        affective_data = raw_data.get('affective_domains', {})
+        
+        # Set created_by
         if request and hasattr(request, 'user'):
             validated_data['created_by'] = request.user
         
-        # Create the result
+        # Handle class_teacher_id and headmaster_id
+        class_teacher_id = raw_data.get('class_teacher_id')
+        headmaster_id = raw_data.get('headmaster_id')
+        if class_teacher_id:
+            try:
+                validated_data['class_teacher'] = User.objects.get(pk=class_teacher_id)
+            except User.DoesNotExist:
+                pass
+        if headmaster_id:
+            try:
+                validated_data['headmaster'] = User.objects.get(pk=headmaster_id)
+            except User.DoesNotExist:
+                pass
+        
+        # Create the main result
         instance = super().create(validated_data)
         
-        # Calculate totals and position
+        # Create subject scores
+        for score_data in subject_scores_data:
+            try:
+                subject_id = score_data.get('subject_id')
+                if subject_id:
+                    subject = Subject.objects.get(pk=subject_id)
+                    ca_score = float(score_data.get('ca_score', 0))
+                    exam_score = float(score_data.get('exam_score', 0))
+                    total_score = ca_score + exam_score
+                    
+                    # Calculate grade
+                    grade = ''
+                    if total_score >= 80: grade = 'A'
+                    elif total_score >= 60: grade = 'B'
+                    elif total_score >= 50: grade = 'C'
+                    elif total_score >= 40: grade = 'D'
+                    else: grade = 'E'
+                    
+                    SubjectScore.objects.create(
+                        result=instance,
+                        subject=subject,
+                        ca_obtainable=int(score_data.get('ca_obtainable', 40)),
+                        exam_obtainable=int(score_data.get('exam_obtainable', 60)),
+                        total_obtainable=int(score_data.get('total_obtainable', 100)),
+                        ca_score=ca_score,
+                        exam_score=exam_score,
+                        total_score=total_score,
+                        grade=grade,
+                        teacher_comment=score_data.get('teacher_comment', '')
+                    )
+            except (Subject.DoesNotExist, Exception) as e:
+                import logging
+                logging.getLogger(__name__).error(f"Error creating subject score: {e}")
+                continue
+        
+        # Create psychomotor skills
+        if psychomotor_data:
+            try:
+                PsychomotorSkills.objects.create(
+                    result=instance,
+                    handwriting=int(psychomotor_data.get('handwriting', 3)),
+                    verbal_fluency=int(psychomotor_data.get('verbal_fluency', 3)),
+                    drawing_and_painting=int(psychomotor_data.get('drawing_and_painting', 3)),
+                    tools_handling=int(psychomotor_data.get('tools_handling', 3)),
+                    sports=int(psychomotor_data.get('sports', 3)),
+                    musical_skills=int(psychomotor_data.get('musical_skills', 3)),
+                    dancing=int(psychomotor_data.get('dancing', 3)),
+                    craft_work=int(psychomotor_data.get('craft_work', 3))
+                )
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).error(f"Error creating psychomotor skills: {e}")
+        
+        # Create affective domains
+        if affective_data:
+            try:
+                AffectiveDomains.objects.create(
+                    result=instance,
+                    punctuality=int(affective_data.get('punctuality', 3)),
+                    neatness=int(affective_data.get('neatness', 3)),
+                    politeness=int(affective_data.get('politeness', 3)),
+                    honesty=int(affective_data.get('honesty', 3)),
+                    cooperation_with_others=int(affective_data.get('cooperation_with_others', 3)),
+                    leadership=int(affective_data.get('leadership', 3)),
+                    altruism=int(affective_data.get('altruism', 3)),
+                    emotional_stability=int(affective_data.get('emotional_stability', 3)),
+                    health=int(affective_data.get('health', 3)),
+                    attitude=int(affective_data.get('attitude', 3)),
+                    attentiveness=int(affective_data.get('attentiveness', 3)),
+                    perseverance=int(affective_data.get('perseverance', 3)),
+                    communication_skill=int(affective_data.get('communication_skill', 3)),
+                    behavioral_comment=affective_data.get('behavioral_comment', '')
+                )
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).error(f"Error creating affective domains: {e}")
+        
+        # NOW recalculate totals after all nested data is saved
         instance.calculate_totals()
-        
-        # Save to trigger position calculation
-        instance.save()
-        
-        return instance
-    
-    def update(self, instance, validated_data):
-        """Update student result"""
-        # Update fields
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        
-        # Validate attendance
-        instance.clean()
-        
-        # Save to trigger calculations
-        instance.save()
+        instance.save(update_fields=[
+            'total_ca_score', 'total_exam_score', 'overall_total_score',
+            'total_obtainable', 'percentage', 'average_score',
+            'overall_grade', 'overall_remark'
+        ])
         
         return instance
 
+
+    def update(self, instance, validated_data):
+        """Update student result with nested data"""
+        request = self.context.get('request')
+        raw_data = request.data if request else {}
+        
+        subject_scores_data = raw_data.get('subject_scores', [])
+        psychomotor_data = raw_data.get('psychomotor_skills', {})
+        affective_data = raw_data.get('affective_domains', {})
+        
+        # Handle class_teacher_id and headmaster_id
+        class_teacher_id = raw_data.get('class_teacher_id')
+        headmaster_id = raw_data.get('headmaster_id')
+        if class_teacher_id:
+            try:
+                validated_data['class_teacher'] = User.objects.get(pk=class_teacher_id)
+            except User.DoesNotExist:
+                pass
+        if headmaster_id:
+            try:
+                validated_data['headmaster'] = User.objects.get(pk=headmaster_id)
+            except User.DoesNotExist:
+                pass
+        
+        # Update main result fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        
+        # Update subject scores — delete old ones and recreate
+        if subject_scores_data:
+            instance.subject_scores.all().delete()
+            for score_data in subject_scores_data:
+                try:
+                    subject_id = score_data.get('subject_id')
+                    if subject_id:
+                        subject = Subject.objects.get(pk=subject_id)
+                        ca_score = float(score_data.get('ca_score', 0))
+                        exam_score = float(score_data.get('exam_score', 0))
+                        total_score = ca_score + exam_score
+                        
+                        grade = ''
+                        if total_score >= 80: grade = 'A'
+                        elif total_score >= 60: grade = 'B'
+                        elif total_score >= 50: grade = 'C'
+                        elif total_score >= 40: grade = 'D'
+                        else: grade = 'E'
+                        
+                        SubjectScore.objects.create(
+                            result=instance,
+                            subject=subject,
+                            ca_obtainable=int(score_data.get('ca_obtainable', 40)),
+                            exam_obtainable=int(score_data.get('exam_obtainable', 60)),
+                            total_obtainable=int(score_data.get('total_obtainable', 100)),
+                            ca_score=ca_score,
+                            exam_score=exam_score,
+                            total_score=total_score,
+                            grade=grade,
+                            teacher_comment=score_data.get('teacher_comment', '')
+                        )
+                except Exception as e:
+                    import logging
+                    logging.getLogger(__name__).error(f"Error updating subject score: {e}")
+                    continue
+        
+        # Update psychomotor skills
+        if psychomotor_data:
+            try:
+                psychomotor, _ = PsychomotorSkills.objects.get_or_create(result=instance)
+                psychomotor.handwriting = int(psychomotor_data.get('handwriting', 3))
+                psychomotor.verbal_fluency = int(psychomotor_data.get('verbal_fluency', 3))
+                psychomotor.drawing_and_painting = int(psychomotor_data.get('drawing_and_painting', 3))
+                psychomotor.tools_handling = int(psychomotor_data.get('tools_handling', 3))
+                psychomotor.sports = int(psychomotor_data.get('sports', 3))
+                psychomotor.musical_skills = int(psychomotor_data.get('musical_skills', 3))
+                psychomotor.dancing = int(psychomotor_data.get('dancing', 3))
+                psychomotor.craft_work = int(psychomotor_data.get('craft_work', 3))
+                psychomotor.save()
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).error(f"Error updating psychomotor skills: {e}")
+        
+        # Update affective domains
+        if affective_data:
+            try:
+                affective, _ = AffectiveDomains.objects.get_or_create(result=instance)
+                affective.punctuality = int(affective_data.get('punctuality', 3))
+                affective.neatness = int(affective_data.get('neatness', 3))
+                affective.politeness = int(affective_data.get('politeness', 3))
+                affective.honesty = int(affective_data.get('honesty', 3))
+                affective.cooperation_with_others = int(affective_data.get('cooperation_with_others', 3))
+                affective.leadership = int(affective_data.get('leadership', 3))
+                affective.altruism = int(affective_data.get('altruism', 3))
+                affective.emotional_stability = int(affective_data.get('emotional_stability', 3))
+                affective.health = int(affective_data.get('health', 3))
+                affective.attitude = int(affective_data.get('attitude', 3))
+                affective.attentiveness = int(affective_data.get('attentiveness', 3))
+                affective.perseverance = int(affective_data.get('perseverance', 3))
+                affective.communication_skill = int(affective_data.get('communication_skill', 3))
+                affective.behavioral_comment = affective_data.get('behavioral_comment', '')
+                affective.save()
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).error(f"Error updating affective domains: {e}")
+        
+        # Recalculate totals
+        instance.calculate_totals()
+        instance.save(update_fields=[
+            'total_ca_score', 'total_exam_score', 'overall_total_score',
+            'total_obtainable', 'percentage', 'average_score',
+            'overall_grade', 'overall_remark'
+        ])
+        
+        return instance
 
 # ============================================
 # RESULT PUBLISHING SERIALIZER
