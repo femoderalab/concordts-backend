@@ -152,6 +152,8 @@ class SubjectScoreSerializer(serializers.ModelSerializer):
     aggregated_score = serializers.DecimalField(max_digits=6, decimal_places=2, read_only=True)
     average_score = serializers.DecimalField(max_digits=5, decimal_places=2, read_only=True)
     
+    result_id = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = SubjectScore
         fields = [
@@ -168,21 +170,45 @@ class SubjectScoreSerializer(serializers.ModelSerializer):
             'aggregated_score', 'average_score', 'created_at', 'updated_at'
         ]
     
+    def get_result_id(self, obj):
+        try:
+            return obj.result_id
+        except Exception:
+            return None
+    
+    # def validate(self, data):
+    #     """Validate subject score data"""
+    #     # Validate scores don't exceed obtainable marks
+    #     if 'ca_score' in data and 'ca_obtainable' in data:
+    #         if data['ca_score'] > data['ca_obtainable']:
+    #             raise serializers.ValidationError({
+    #                 'ca_score': f"CA score cannot exceed {data['ca_obtainable']}"
+    #             })
+        
+    #     if 'exam_score' in data and 'exam_obtainable' in data:
+    #         if data['exam_score'] > data['exam_obtainable']:
+    #             raise serializers.ValidationError({
+    #                 'exam_score': f"Exam score cannot exceed {data['exam_obtainable']}"
+    #             })
+        
+    #     return data
+    
     def validate(self, data):
-        """Validate subject score data"""
-        # Validate scores don't exceed obtainable marks
-        if 'ca_score' in data and 'ca_obtainable' in data:
-            if data['ca_score'] > data['ca_obtainable']:
-                raise serializers.ValidationError({
-                    'ca_score': f"CA score cannot exceed {data['ca_obtainable']}"
-                })
-        
-        if 'exam_score' in data and 'exam_obtainable' in data:
-            if data['exam_score'] > data['exam_obtainable']:
-                raise serializers.ValidationError({
-                    'exam_score': f"Exam score cannot exceed {data['exam_obtainable']}"
-                })
-        
+        try:
+            if 'ca_score' in data and 'ca_obtainable' in data:
+                if float(data['ca_score']) > float(data['ca_obtainable']):
+                    raise serializers.ValidationError({
+                        'ca_score': f"CA score cannot exceed {data['ca_obtainable']}"
+                    })
+            if 'exam_score' in data and 'exam_obtainable' in data:
+                if float(data['exam_score']) > float(data['exam_obtainable']):
+                    raise serializers.ValidationError({
+                        'exam_score': f"Exam score cannot exceed {data['exam_obtainable']}"
+                    })
+        except serializers.ValidationError:
+            raise
+        except Exception:
+            pass
         return data
     
     def create(self, validated_data):
@@ -234,7 +260,8 @@ class SubjectScoreSerializer(serializers.ModelSerializer):
 class PsychomotorSkillsSerializer(serializers.ModelSerializer):
     """Serializer for psychomotor skills assessment"""
     
-    result_id = serializers.IntegerField(source='result.id', read_only=True)
+    # result_id = serializers.IntegerField(source='result.id', read_only=True)
+    result_id = serializers.SerializerMethodField(read_only=True)
     overall_psychomotor_rating = serializers.DecimalField(
         max_digits=4, decimal_places=2, read_only=True
     )
@@ -251,6 +278,12 @@ class PsychomotorSkillsSerializer(serializers.ModelSerializer):
             'id', 'result_id', 'overall_psychomotor_rating', 
             'created_at', 'updated_at'
         ]
+        
+    def get_result_id(self, obj):
+        try:
+            return obj.result.id if obj.result else None
+        except Exception:
+            return None
     
     def create(self, validated_data):
         """Create psychomotor skills and calculate rating"""
@@ -274,7 +307,8 @@ class PsychomotorSkillsSerializer(serializers.ModelSerializer):
 class AffectiveDomainsSerializer(serializers.ModelSerializer):
     """Serializer for affective domains assessment"""
     
-    result_id = serializers.IntegerField(source='result.id', read_only=True)
+    # result_id = serializers.IntegerField(source='result.id', read_only=True)
+    result_id = serializers.SerializerMethodField(read_only=True)
     overall_affective_rating = serializers.DecimalField(
         max_digits=4, decimal_places=2, read_only=True
     )
@@ -292,6 +326,11 @@ class AffectiveDomainsSerializer(serializers.ModelSerializer):
             'id', 'result_id', 'overall_affective_rating', 
             'created_at', 'updated_at'
         ]
+    def get_result_id(self, obj):
+            try:
+                return obj.result.id if obj.result else None
+            except Exception:
+                return None
     
     def create(self, validated_data):
         """Create affective domains and calculate rating"""
@@ -358,12 +397,12 @@ class StudentResultSerializer(serializers.ModelSerializer):
     psychomotor_skills = PsychomotorSkillsSerializer(read_only=True)
     affective_domains = AffectiveDomainsSerializer(read_only=True)
     
-    subject_scores_data = serializers.ListField(
-    child=serializers.DictField(),
-    write_only=True,
-    required=False,
-    source='subject_scores'
-)
+#     subject_scores_data = serializers.ListField(
+#     child=serializers.DictField(),
+#     write_only=True,
+#     required=False,
+#     source='subject_scores'
+# )
     
     # Calculated fields
     attendance_percentage = serializers.SerializerMethodField(read_only=True)
@@ -422,12 +461,21 @@ class StudentResultSerializer(serializers.ModelSerializer):
             'created_by', 'created_at', 'updated_at'
         ]
     
+    # def get_attendance_percentage(self, obj):
+    #     """Calculate attendance percentage"""
+    #     if obj.frequency_of_school_opened > 0:
+    #         percentage = (obj.no_of_times_present / obj.frequency_of_school_opened) * 100
+    #         return round(percentage, 2)
+    #     return 0.00
     def get_attendance_percentage(self, obj):
-        """Calculate attendance percentage"""
-        if obj.frequency_of_school_opened > 0:
-            percentage = (obj.no_of_times_present / obj.frequency_of_school_opened) * 100
-            return round(percentage, 2)
-        return 0.00
+        try:
+            freq = int(obj.frequency_of_school_opened or 0)
+            present = int(obj.no_of_times_present or 0)
+            if freq > 0:
+                return round((present / freq) * 100, 2)
+            return 0.00
+        except Exception:
+            return 0.00
     
     # def get_is_promotion_recommended(self, obj):
     #     """Determine if promotion is recommended based on performance"""
@@ -447,45 +495,68 @@ class StudentResultSerializer(serializers.ModelSerializer):
     #     # If more than 30% subjects failed, no promotion
     #     fail_percentage = (fail_count / subject_scores.count()) * 100
     #     return fail_percentage < 30
+    # def get_is_promotion_recommended(self, obj):
+    #     """Determine if promotion is recommended based on performance"""
+    #     try:
+    #         if float(obj.percentage or 0) >= 50:
+    #             return True
+            
+    #         subject_scores = obj.subject_scores.all()
+    #         if not subject_scores:
+    #             return False
+            
+    #         fail_count = sum(1 for score in subject_scores if score.grade in ['D', 'E'])
+    #         fail_percentage = (fail_count / subject_scores.count()) * 100
+    #         return fail_percentage < 30
+    #     except Exception:
+    #         return False
     def get_is_promotion_recommended(self, obj):
-        """Determine if promotion is recommended based on performance"""
         try:
             if float(obj.percentage or 0) >= 50:
                 return True
-            
-            subject_scores = obj.subject_scores.all()
-            if not subject_scores:
+            count = obj.subject_scores.count()
+            if count == 0:
                 return False
-            
-            fail_count = sum(1 for score in subject_scores if score.grade in ['D', 'E'])
-            fail_percentage = (fail_count / subject_scores.count()) * 100
-            return fail_percentage < 30
+            fail_count = obj.subject_scores.filter(grade__in=['D', 'E']).count()
+            return (fail_count / count) * 100 < 30
         except Exception:
             return False
     
+    # def validate(self, data):
+    #     """Validate result data"""
+    #     # Check if student is in the class level
+    #     student = data.get('student')
+    #     class_level = data.get('class_level')
+        
+    #     if student and class_level:
+    #         if hasattr(student, 'class_level'):
+    #             if student.class_level != class_level:
+    #                 raise serializers.ValidationError({
+    #                     'student': f"Student is not in class level {class_level.name}"
+    #                 })
+        
+    #     # Validate attendance
+    #     freq = data.get('frequency_of_school_opened', 0)
+    #     present = data.get('no_of_times_present', 0)
+    #     absent = data.get('no_of_times_absent', 0)
+        
+    #     if present + absent > freq:
+    #         raise serializers.ValidationError({
+    #             'attendance': "Present + Absent cannot exceed frequency of school opened"
+    #         })
+        
+    #     return data
+    
     def validate(self, data):
         """Validate result data"""
-        # Check if student is in the class level
-        student = data.get('student')
-        class_level = data.get('class_level')
-        
-        if student and class_level:
-            if hasattr(student, 'class_level'):
-                if student.class_level != class_level:
-                    raise serializers.ValidationError({
-                        'student': f"Student is not in class level {class_level.name}"
-                    })
-        
-        # Validate attendance
-        freq = data.get('frequency_of_school_opened', 0)
-        present = data.get('no_of_times_present', 0)
-        absent = data.get('no_of_times_absent', 0)
-        
-        if present + absent > freq:
-            raise serializers.ValidationError({
-                'attendance': "Present + Absent cannot exceed frequency of school opened"
-            })
-        
+        try:
+            freq = int(data.get('frequency_of_school_opened', 0) or 0)
+            present = int(data.get('no_of_times_present', 0) or 0)
+            absent = int(data.get('no_of_times_absent', 0) or 0)
+            if freq > 0 and (present + absent) > freq:
+                data['no_of_times_absent'] = max(0, freq - present)
+        except Exception:
+            pass
         return data
     
     def create(self, validated_data):
@@ -1122,14 +1193,30 @@ class ReportCardSerializer(serializers.ModelSerializer):
             return f"{obj.position_in_class}{suffix} out of {obj.number_of_pupils_in_class}"
         return "Not available"
     
+    # def get_attendance_summary(self, obj):
+    #     """Get attendance summary"""
+    #     if obj.frequency_of_school_opened > 0:
+    #         percentage = (obj.no_of_times_present / obj.frequency_of_school_opened) * 100
+    #         return {
+    #             'total_days': obj.frequency_of_school_opened,
+    #             'present': obj.no_of_times_present,
+    #             'absent': obj.no_of_times_absent,
+    #             'percentage': round(percentage, 2)
+    #         }
+    #     return {'total_days': 0, 'present': 0, 'absent': 0, 'percentage': 0}
+
     def get_attendance_summary(self, obj):
-        """Get attendance summary"""
-        if obj.frequency_of_school_opened > 0:
-            percentage = (obj.no_of_times_present / obj.frequency_of_school_opened) * 100
-            return {
-                'total_days': obj.frequency_of_school_opened,
-                'present': obj.no_of_times_present,
-                'absent': obj.no_of_times_absent,
-                'percentage': round(percentage, 2)
-            }
-        return {'total_days': 0, 'present': 0, 'absent': 0, 'percentage': 0}
+        try:
+            freq = int(obj.frequency_of_school_opened or 0)
+            present = int(obj.no_of_times_present or 0)
+            absent = int(obj.no_of_times_absent or 0)
+            if freq > 0:
+                return {
+                    'total_days': freq,
+                    'present': present,
+                    'absent': absent,
+                    'percentage': round((present / freq) * 100, 2)
+                }
+            return {'total_days': 0, 'present': 0, 'absent': 0, 'percentage': 0}
+        except Exception:
+            return {'total_days': 0, 'present': 0, 'absent': 0, 'percentage': 0}

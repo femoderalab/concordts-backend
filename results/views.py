@@ -654,16 +654,30 @@ class StudentResultViewSet(viewsets.ModelViewSet):
             'query': query
         })
             
+    # def destroy(self, request, *args, **kwargs):
+    #     try:
+    #         instance = self.get_object()
+    #         # Check if user has permission to delete
+    #         if not request.user.has_perm('results.delete_studentresult'):
+    #             return Response(
+    #                 {"detail": "You do not have permission to delete results."},
+    #                 status=status.HTTP_403_FORBIDDEN
+    #             )
+            
+    #         self.perform_destroy(instance)
+    #         return Response(
+    #             {"detail": "Result deleted successfully."},
+    #             status=status.HTTP_200_OK
+    #         )
+    #     except Exception as e:
+    #         return Response(
+    #             {"detail": str(e)},
+    #             status=status.HTTP_500_INTERNAL_SERVER_ERROR
+    #         )
+    
     def destroy(self, request, *args, **kwargs):
         try:
             instance = self.get_object()
-            # Check if user has permission to delete
-            if not request.user.has_perm('results.delete_studentresult'):
-                return Response(
-                    {"detail": "You do not have permission to delete results."},
-                    status=status.HTTP_403_FORBIDDEN
-                )
-            
             self.perform_destroy(instance)
             return Response(
                 {"detail": "Result deleted successfully."},
