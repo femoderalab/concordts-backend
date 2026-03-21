@@ -429,24 +429,39 @@ class StudentResultSerializer(serializers.ModelSerializer):
             return round(percentage, 2)
         return 0.00
     
+    # def get_is_promotion_recommended(self, obj):
+    #     """Determine if promotion is recommended based on performance"""
+    #     if obj.percentage >= 50:
+    #         return True
+        
+    #     # Check subject failures
+    #     subject_scores = obj.subject_scores.all()
+    #     if not subject_scores:
+    #         return False
+        
+    #     fail_count = 0
+    #     for score in subject_scores:
+    #         if score.grade in ['D', 'E']:
+    #             fail_count += 1
+        
+    #     # If more than 30% subjects failed, no promotion
+    #     fail_percentage = (fail_count / subject_scores.count()) * 100
+    #     return fail_percentage < 30
     def get_is_promotion_recommended(self, obj):
         """Determine if promotion is recommended based on performance"""
-        if obj.percentage >= 50:
-            return True
-        
-        # Check subject failures
-        subject_scores = obj.subject_scores.all()
-        if not subject_scores:
+        try:
+            if float(obj.percentage or 0) >= 50:
+                return True
+            
+            subject_scores = obj.subject_scores.all()
+            if not subject_scores:
+                return False
+            
+            fail_count = sum(1 for score in subject_scores if score.grade in ['D', 'E'])
+            fail_percentage = (fail_count / subject_scores.count()) * 100
+            return fail_percentage < 30
+        except Exception:
             return False
-        
-        fail_count = 0
-        for score in subject_scores:
-            if score.grade in ['D', 'E']:
-                fail_count += 1
-        
-        # If more than 30% subjects failed, no promotion
-        fail_percentage = (fail_count / subject_scores.count()) * 100
-        return fail_percentage < 30
     
     def validate(self, data):
         """Validate result data"""
