@@ -104,26 +104,16 @@ WSGI_APPLICATION = 'school_management.wsgi.application'
 # ==============================================================================
 DATABASES = {
     'default': dj_database_url.config(
-        default=config('DATABASE_URL'),
+        default=os.environ.get('DATABASE_URL'),
         conn_max_age=600,
         conn_health_checks=True,
-        ssl_require=True  # Required for Supabase
     )
 }
 
-# Add SSL options for Supabase connection
-if 'DATABASE_URL' in os.environ:
-    DATABASES['default']['OPTIONS'] = {
-        'sslmode': 'require',
-    }
-
-# Optional: Test connection on startup
-try:
-    from django.db import connection
-    connection.ensure_connection()
-    print("✓ Supabase database connected successfully")
-except Exception as e:
-    print(f"⚠ Supabase connection warning: {e}")
+# Force SSL
+if 'OPTIONS' not in DATABASES['default']:
+    DATABASES['default']['OPTIONS'] = {}
+DATABASES['default']['OPTIONS']['sslmode'] = 'require'
 
 # ==============================================================================
 # PASSWORD VALIDATION - SIMPLE (min 5 characters)
