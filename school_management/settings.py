@@ -7,6 +7,7 @@ from datetime import timedelta
 from decouple import config
 import dj_database_url
 import warnings
+import cloudinary
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -58,8 +59,7 @@ CLOUDINARY_STORAGE = {
 
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
-# Explicitly configure cloudinary with credentials
-import cloudinary
+
 cloudinary.config(
     cloud_name=config('CLOUDINARY_CLOUD_NAME'),
     api_key=config('CLOUDINARY_API_KEY'),
@@ -100,15 +100,30 @@ TEMPLATES = [
 WSGI_APPLICATION = 'school_management.wsgi.application'
 
 # ==============================================================================
-# DATABASE - PRODUCTION (PostgreSQL)
+# DATABASE - PRODUCTION (Supabase PostgreSQL)
 # ==============================================================================
 DATABASES = {
     'default': dj_database_url.config(
         default=config('DATABASE_URL'),
         conn_max_age=600,
         conn_health_checks=True,
+        ssl_require=True  # Required for Supabase
     )
 }
+
+# Add SSL options for Supabase connection
+if 'DATABASE_URL' in os.environ:
+    DATABASES['default']['OPTIONS'] = {
+        'sslmode': 'require',
+    }
+
+# Optional: Test connection on startup
+try:
+    from django.db import connection
+    connection.ensure_connection()
+    print("✓ Supabase database connected successfully")
+except Exception as e:
+    print(f"⚠ Supabase connection warning: {e}")
 
 # ==============================================================================
 # PASSWORD VALIDATION - SIMPLE (min 5 characters)
