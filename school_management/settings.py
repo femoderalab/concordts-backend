@@ -8,9 +8,7 @@ from decouple import config
 import dj_database_url
 import warnings
 import cloudinary
-from dotenv import load_dotenv
 
-load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
