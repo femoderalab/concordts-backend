@@ -7,7 +7,8 @@ from django.utils import timezone
 import random
 import string
 from django.db.models import Q
-from users.models import User  # Changed from AUTH_USER_MODEL
+from users.models import User  
+from cloudinary.models import CloudinaryField
 
 
 class Student(models.Model):
@@ -240,8 +241,9 @@ class Student(models.Model):
     )
     
     # Fee Payment Evidence
-    fee_payment_evidence = models.ImageField(
-        upload_to='fee_evidence/',
+    fee_payment_evidence = CloudinaryField(
+        'fee_payment_evidence',
+        folder='students/fee_evidence/',
         blank=True,
         null=True,
         help_text="Upload payment receipt/evidence"
@@ -324,16 +326,19 @@ class Student(models.Model):
     
     # Document Upload Checklist
     birth_certificate_uploaded = models.BooleanField(default=False)
-    birth_certificate = models.FileField(
-        upload_to='student_documents/birth_certificates/',
+    birth_certificate = CloudinaryField(
+        'birth_certificate',
+        folder='students/birth_certificates/',
         blank=True,
         null=True,
-        help_text="Upload birth certificate"
+        help_text="Upload birth certificate",
+        resource_type='auto'  
     )
     
     student_image_uploaded = models.BooleanField(default=False)
-    student_image = models.ImageField(
-        upload_to='student_documents/images/',
+    student_image = CloudinaryField(
+        'student_image',
+        folder='students/images/',
         blank=True,
         null=True,
         help_text="Upload student photograph"

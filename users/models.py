@@ -11,64 +11,7 @@ import random
 import string
 import uuid
 from django.conf import settings
-
-
-# class CustomUserManager(BaseUserManager):
-#     """
-#     Custom user manager to handle user creation with registration numbers.
-#     """
-    
-#     def create_user(self, email=None, password=None, **extra_fields):
-#         """
-#         Create and save a regular user with registration number.
-#         """
-#         # Generate registration number if not provided
-#         if 'registration_number' not in extra_fields or not extra_fields['registration_number']:
-#             while True:
-#                 random_digits = ''.join(random.choices(string.digits, k=4))
-#                 registration_number = f"CTS_{random_digits}"
-#                 if not User.objects.filter(registration_number=registration_number).exists():
-#                     extra_fields['registration_number'] = registration_number
-#                     break
-        
-#         # Set default values for active and verified
-#         extra_fields.setdefault('is_active', True)
-#         extra_fields.setdefault('is_verified', True)
-        
-#         # Email can be None or empty string
-#         if email is not None:
-#             email = self.normalize_email(email)
-#             if email == '':
-#                 email = None
-        
-#         user = self.model(email=email, **extra_fields)
-        
-#         # Set password if provided, otherwise set default
-#         if password:
-#             user.set_password(password)
-#         else:
-#             # Set a default password that can be changed later
-#             user.set_password('Student@2024')
-            
-#         user.save(using=self._db)
-#         return user
-    
-#     def create_superuser(self, email=None, password=None, **extra_fields):
-#         """
-#         Create and save a superuser with administrative privileges.
-#         """
-#         extra_fields.setdefault('is_staff', True)
-#         extra_fields.setdefault('is_superuser', True)
-#         extra_fields.setdefault('is_active', True)
-#         extra_fields.setdefault('is_verified', True)  # Add this line
-#         extra_fields.setdefault('role', 'head')
-        
-#         if extra_fields.get('is_staff') is not True:
-#             raise ValueError('Superuser must have is_staff=True.')
-#         if extra_fields.get('is_superuser') is not True:
-#             raise ValueError('Superuser must have is_superuser=True.')
-        
-#         return self.create_user(email, password, **extra_fields)
+from cloudinary.models import CloudinaryField
 
 class CustomUserManager(BaseUserManager):
     """
@@ -192,7 +135,10 @@ class User(AbstractUser):
     date_of_birth = models.DateField(blank=True, null=True)
     phone_number = models.CharField(max_length=15, blank=True)
     alternative_phone = models.CharField(max_length=15, blank=True)
-    profile_picture = models.ImageField(upload_to='profile_pictures/', blank=True, null=True)
+    profile_picture = CloudinaryField('profile_picture', 
+                                   folder='users/profiles/',
+                                   blank=True, 
+                                   null=True)
     email = models.EmailField(
         max_length=254,
         blank=True,

@@ -8,6 +8,9 @@ from decouple import config
 import dj_database_url
 import warnings
 import cloudinary
+from dotenv import load_dotenv
+
+load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -55,17 +58,28 @@ CLOUDINARY_STORAGE = {
     'CLOUD_NAME': config('CLOUDINARY_CLOUD_NAME'),
     'API_KEY': config('CLOUDINARY_API_KEY'),
     'API_SECRET': config('CLOUDINARY_API_SECRET'),
+    'SECURE': True,  # Force HTTPS
+    'STATIC_IMAGES_EXTENSIONS': ['jpg', 'jpeg', 'png', 'gif', 'webp'],
+    'STATICFILE_EXTENSIONS': ['jpg', 'jpeg', 'png', 'gif', 'webp'],
 }
 
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
-
+# Initialize Cloudinary with configuration
 cloudinary.config(
     cloud_name=config('CLOUDINARY_CLOUD_NAME'),
     api_key=config('CLOUDINARY_API_KEY'),
     api_secret=config('CLOUDINARY_API_SECRET'),
     secure=True
 )
+
+CLOUDINARY_UPLOAD_OPTIONS = {
+    'folder': 'school_management',  
+    'use_filename': True,
+    'unique_filename': True,
+    'overwrite': False,
+    'resource_type': 'auto', 
+}
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',  
@@ -107,6 +121,7 @@ DATABASES = {
         default=os.environ.get('DATABASE_URL'),
         conn_max_age=600,
         conn_health_checks=True,
+        engine='django.db.backends.postgresql',
     )
 }
 

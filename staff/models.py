@@ -7,7 +7,8 @@ from django.db import models
 from django.utils import timezone
 import random
 import string
-from users.models import User  # Direct import instead of AUTH_USER_MODEL
+from users.models import User  
+from cloudinary.models import CloudinaryField
 
 
 class Staff(models.Model):
@@ -333,29 +334,36 @@ class Staff(models.Model):
     )
     
     # Documents & Certificates
-    resume = models.FileField(
-        upload_to='staff_documents/resumes/',
+    resume = CloudinaryField(
+    'resume',
+        folder='staff/resumes/',
         blank=True,
         null=True,
-        help_text="Upload resume/CV"
+        help_text="Upload resume/CV",
+        resource_type='auto'  # Handles PDF/DOC files
     )
     
-    certificates = models.FileField(
-        upload_to='staff_documents/certificates/',
+    certificates = CloudinaryField(
+        'certificates',
+        folder='staff/certificates/',
         blank=True,
         null=True,
-        help_text="Upload certificates"
+        help_text="Upload certificates",
+        resource_type='auto'
     )
     
-    id_copy = models.FileField(
-        upload_to='staff_documents/ids/',
+    id_copy = CloudinaryField(
+        'id_copy',
+        folder='staff/id_copies/',
         blank=True,
         null=True,
-        help_text="Upload ID card copy"
+        help_text="Upload ID card copy",
+        resource_type='auto'
     )
     
-    passport_photo = models.ImageField(
-        upload_to='staff_documents/photos/',
+    passport_photo = CloudinaryField(
+        'passport_photo',
+        folder='staff/photos/',
         blank=True,
         null=True,
         help_text="Passport photograph"
