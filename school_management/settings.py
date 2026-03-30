@@ -118,7 +118,7 @@ WSGI_APPLICATION = 'school_management.wsgi.application'
 # ==============================================================================
 DATABASES = {
     'default': dj_database_url.config(
-        default=os.environ.get('DATABASE_URL'),
+        default=config('DATABASE_URL', default=''),
         conn_max_age=600,
         conn_health_checks=True,
     )
