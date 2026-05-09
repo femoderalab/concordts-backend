@@ -670,517 +670,6 @@ class AdminDirectPasswordResetView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
 
-# class AdminDashboardView(APIView):
-#     """
-#     Get admin dashboard statistics.
-#     GET /api/auth/admin/dashboard/
-#     """
-    
-#     permission_classes = [permissions.IsAdminUser]
-    
-#     def get(self, request):
-#         try:
-#             logger.info("AdminDashboardView: Starting statistics collection")
-            
-#             # ===========================
-#             # USER STATISTICS
-#             # ===========================
-#             from users.models import User
-#             from users.serializers import UserProfileSerializer
-            
-#             total_users = User.objects.all().count()
-#             active_users = User.objects.filter(is_active=True).count()
-#             verified_users = User.objects.filter(is_verified=True).count()
-            
-#             logger.info(f"User stats - Total: {total_users}, Active: {active_users}, Verified: {verified_users}")
-            
-#             # Role counts
-#             role_counts = {}
-#             for role_code, role_name in User.ROLE_CHOICES:
-#                 count = User.objects.filter(role=role_code).count()
-#                 role_counts[role_name] = count
-            
-#             # ===========================
-#             # STUDENT STATISTICS
-#             # ===========================
-#             try:
-#                 from students.models import Student
-#                 total_students = Student.objects.all().count()
-                
-#                 # Try different field names for enrollment status
-#                 enrolled_students = 0
-#                 try:
-#                     # Check enrollment_status field
-#                     enrolled_students = Student.objects.filter(enrollment_status='enrolled').count()
-#                 except Exception as e1:
-#                     logger.info(f"enrollment_status field not found: {str(e1)}")
-#                     try:
-#                         # Check status field
-#                         enrolled_students = Student.objects.filter(status='active').count()
-#                     except Exception as e2:
-#                         logger.info(f"status field not found: {str(e2)}")
-#                         try:
-#                             # Check is_active field
-#                             enrolled_students = Student.objects.filter(is_active=True).count()
-#                         except Exception as e3:
-#                             logger.info(f"is_active field not found: {str(e3)}")
-#                             # Default: count all active students
-#                             enrolled_students = Student.objects.filter(user__is_active=True).count()
-                
-#                 logger.info(f"Student stats - Total: {total_students}, Enrolled: {enrolled_students}")
-#             except Exception as e:
-#                 logger.error(f"Error getting student statistics: {str(e)}", exc_info=True)
-#                 total_students = 0
-#                 enrolled_students = 0
-            
-#             # ===========================
-#             # PARENT STATISTICS
-#             # ===========================
-#             try:
-#                 from parents.models import Parent
-#                 total_parents = Parent.objects.all().count()
-#                 registered_parents = Parent.objects.filter(user__is_active=True).count()
-#                 logger.info(f"Parent stats - Total: {total_parents}, Registered: {registered_parents}")
-#             except Exception as e:
-#                 logger.error(f"Error getting parent statistics: {str(e)}", exc_info=True)
-#                 total_parents = 0
-#                 registered_parents = 0
-            
-#             # ===========================
-#             # STAFF STATISTICS
-#             # ===========================
-#             try:
-#                 from staff.models import Staff
-#                 total_staff = Staff.objects.all().count()
-                
-#                 # Try to get teaching staff - use user's role instead
-#                 teaching_staff = 0
-#                 try:
-#                     # Filter by user role
-#                     teaching_staff = Staff.objects.filter(
-#                         user__role__in=['teacher', 'form_teacher', 'subject_teacher']
-#                     ).count()
-#                 except Exception as e1:
-#                     logger.info(f"Error filtering by user role: {str(e1)}")
-#                     try:
-#                         # Try staff_type field
-#                         teaching_staff = Staff.objects.filter(staff_type='teaching').count()
-#                     except Exception as e2:
-#                         logger.info(f"staff_type field not found: {str(e2)}")
-#                         # If no staff_type field, count all staff
-#                         teaching_staff = total_staff
-                
-#                 non_teaching_staff = total_staff - teaching_staff
-#                 logger.info(f"Staff stats - Total: {total_staff}, Teaching: {teaching_staff}")
-#             except Exception as e:
-#                 logger.error(f"Error getting staff statistics: {str(e)}", exc_info=True)
-#                 total_staff = 0
-#                 teaching_staff = 0
-#                 non_teaching_staff = 0
-            
-#             # ===========================
-#             # ACADEMIC STATISTICS - FIXED
-#             # ===========================
-#             try:
-#                 # Try Class model first
-#                 try:
-#                     from academic.models import Class
-#                     total_classes = Class.objects.all().count()
-                    
-#                     # Try different ways to find active classes
-#                     try:
-#                         active_classes = Class.objects.filter(is_active=True).count()
-#                     except Exception as e:
-#                         logger.info(f"is_active field not found: {str(e)}")
-#                         try:
-#                             active_classes = Class.objects.filter(status='active').count()
-#                         except Exception as e:
-#                             logger.info(f"status field not found: {str(e)}")
-#                             active_classes = total_classes
-                
-#                 except ImportError:
-#                     # Try alternative model names
-#                     try:
-#                         from academic.models import SchoolClass
-#                         total_classes = SchoolClass.objects.all().count()
-#                         active_classes = SchoolClass.objects.filter(is_active=True).count()
-#                     except ImportError:
-#                         try:
-#                             from academic.models import ClassLevel
-#                             total_classes = ClassLevel.objects.all().count()
-#                             active_classes = ClassLevel.objects.filter(is_active=True).count()
-#                         except ImportError:
-#                             total_classes = 0
-#                             active_classes = 0
-                
-#                 logger.info(f"Class stats - Total: {total_classes}, Active: {active_classes}")
-#             except Exception as e:
-#                 logger.error(f"Error getting class statistics: {str(e)}", exc_info=True)
-#                 total_classes = 0
-#                 active_classes = 0
-            
-#             # ===========================
-#             # SUBJECT STATISTICS - FIXED
-#             # ===========================
-#             try:
-#                 from academic.models import Subject
-#                 total_subjects = Subject.objects.all().count()
-                
-#                 # Try different ways to find active subjects
-#                 try:
-#                     active_subjects = Subject.objects.filter(is_active=True).count()
-#                 except Exception as e:
-#                     logger.info(f"Subject is_active field not found: {str(e)}")
-#                     try:
-#                         active_subjects = Subject.objects.filter(status='active').count()
-#                     except Exception as e:
-#                         logger.info(f"Subject status field not found: {str(e)}")
-#                         active_subjects = total_subjects
-                
-#                 logger.info(f"Subject stats - Total: {total_subjects}, Active: {active_subjects}")
-#             except Exception as e:
-#                 logger.error(f"Error getting subject statistics: {str(e)}", exc_info=True)
-#                 total_subjects = 0
-#                 active_subjects = 0
-            
-#             # ===========================
-#             # RESULTS STATISTICS - FIXED
-#             # ===========================
-#             total_results = 0
-#             results_published = 0
-#             results_percentage = 0
-            
-#             try:
-#                 # Try different model names for results
-#                 try:
-#                     from results.models import StudentResult
-#                     total_results = StudentResult.objects.all().count()
-#                     results_published = StudentResult.objects.filter(is_published=True).count()
-#                     logger.info(f"Using StudentResult model - Total: {total_results}, Published: {results_published}")
-                
-#                 except ImportError:
-#                     try:
-#                         from results.models import Result
-#                         total_results = Result.objects.all().count()
-#                         results_published = Result.objects.filter(is_published=True).count()
-#                         logger.info(f"Using Result model - Total: {total_results}, Published: {results_published}")
-                    
-#                     except ImportError:
-#                         try:
-#                             from results.models import ExamResult
-#                             total_results = ExamResult.objects.all().count()
-#                             results_published = ExamResult.objects.filter(is_published=True).count()
-#                             logger.info(f"Using ExamResult model - Total: {total_results}, Published: {results_published}")
-                        
-#                         except ImportError:
-#                             logger.warning("Could not find any Result model in results.models")
-                
-#                 # Calculate percentage
-#                 if total_results > 0:
-#                     results_percentage = round((results_published / total_results * 100), 2)
-#                 else:
-#                     results_percentage = 0
-                    
-#                 logger.info(f"Result stats - Total: {total_results}, Published: {results_published}, Percentage: {results_percentage}%")
-                
-#             except Exception as e:
-#                 logger.error(f"Error getting result statistics: {str(e)}", exc_info=True)
-            
-#             # ===========================
-#             # FEE STATISTICS - FIXED
-#             # ===========================
-#             fee_stats = {
-#                 'total_expected': 0,
-#                 'total_collected': 0,
-#                 'percentage': 0,
-#                 'currency': '₦',
-#                 'status': {
-#                     'fully_paid': 0,
-#                     'partial': 0,
-#                     'not_paid': 0,
-#                     'scholarship': 0,
-#                     'exempted': 0,
-#                 }
-#             }
-            
-#             try:
-#                 from students.models import Student
-                
-#                 # Get all available fields from Student model
-#                 student_fields = [f.name for f in Student._meta.get_fields()]
-#                 logger.info(f"Available Student fields: {student_fields}")
-                
-#                 # Try to find fee-related fields dynamically
-#                 fee_expected = 0
-#                 fee_paid = 0
-                
-#                 # Method 1: Check if there's a separate Fee model
-#                 try:
-#                     from students.models import Fee
-#                     # If Fee model exists, calculate from there
-#                     fee_totals = Fee.objects.aggregate(
-#                         total_expected=Sum('amount_expected'),
-#                         total_collected=Sum('amount_paid')
-#                     )
-#                     fee_expected = fee_totals.get('total_expected') or 0
-#                     fee_paid = fee_totals.get('total_collected') or 0
-                    
-#                     # Get fee status counts
-#                     fully_paid = Fee.objects.filter(
-#                         amount_paid__gte=F('amount_expected')
-#                     ).count()
-                    
-#                     partial_paid = Fee.objects.filter(
-#                         amount_paid__gt=0,
-#                         amount_paid__lt=F('amount_expected')
-#                     ).count()
-                    
-#                     not_paid = Fee.objects.filter(
-#                         Q(amount_paid=0) | Q(amount_paid__isnull=True)
-#                     ).count()
-                    
-#                     # Check for scholarship/exemption
-#                     scholarship_count = Fee.objects.filter(
-#                         Q(fee_status='scholarship') | Q(is_scholarship=True)
-#                     ).count()
-                    
-#                     exempted_count = Fee.objects.filter(
-#                         Q(fee_status='exempted') | Q(is_exempted=True)
-#                     ).count()
-                    
-#                     fee_stats['status']['fully_paid'] = fully_paid
-#                     fee_stats['status']['partial'] = partial_paid
-#                     fee_stats['status']['not_paid'] = not_paid
-#                     fee_stats['status']['scholarship'] = scholarship_count
-#                     fee_stats['status']['exempted'] = exempted_count
-                    
-#                 except ImportError:
-#                     # Method 2: Check for fee fields directly in Student model
-#                     fee_fields_found = False
-                    
-#                     # List of possible fee field names
-#                     fee_field_options = [
-#                         ('fees_expected', 'fees_paid'),
-#                         ('total_fee', 'paid_fee'),
-#                         ('fee_amount', 'amount_paid'),
-#                         ('expected_fee', 'fee_paid'),
-#                         ('annual_fee', 'fee_paid_amount'),
-#                     ]
-                    
-#                     for expected_field, paid_field in fee_field_options:
-#                         if expected_field in student_fields and paid_field in student_fields:
-#                             try:
-#                                 totals = Student.objects.aggregate(
-#                                     total_expected=Sum(expected_field),
-#                                     total_collected=Sum(paid_field)
-#                                 )
-#                                 fee_expected = totals.get('total_expected') or 0
-#                                 fee_paid = totals.get('total_collected') or 0
-                                
-#                                 # Calculate payment status
-#                                 fully_paid = Student.objects.filter(
-#                                     **{f'{paid_field}__gte': F(expected_field)}
-#                                 ).count()
-                                
-#                                 partial_paid = Student.objects.filter(
-#                                     **{
-#                                         f'{paid_field}__gt': 0,
-#                                         f'{paid_field}__lt': F(expected_field)
-#                                     }
-#                                 ).count()
-                                
-#                                 not_paid = Student.objects.filter(
-#                                     Q(**{paid_field: 0}) | Q(**{f'{paid_field}__isnull': True})
-#                                 ).count()
-                                
-#                                 # Check scholarship fields
-#                                 scholarship_fields = ['has_scholarship', 'scholarship', 'is_scholarship']
-#                                 exemption_fields = ['fee_exemption', 'is_exempted', 'exempted']
-                                
-#                                 scholarship_count = 0
-#                                 exempted_count = 0
-                                
-#                                 for field in scholarship_fields:
-#                                     if field in student_fields:
-#                                         scholarship_count = Student.objects.filter(**{field: True}).count()
-#                                         break
-                                
-#                                 for field in exemption_fields:
-#                                     if field in student_fields:
-#                                         exempted_count = Student.objects.filter(**{field: True}).count()
-#                                         break
-                                
-#                                 fee_stats['status']['fully_paid'] = fully_paid
-#                                 fee_stats['status']['partial'] = partial_paid
-#                                 fee_stats['status']['not_paid'] = not_paid
-#                                 fee_stats['status']['scholarship'] = scholarship_count
-#                                 fee_stats['status']['exempted'] = exempted_count
-                                
-#                                 fee_fields_found = True
-#                                 logger.info(f"Found fee fields: {expected_field}, {paid_field}")
-#                                 break
-                                
-#                             except Exception as e:
-#                                 logger.info(f"Error with fee fields {expected_field}/{paid_field}: {str(e)}")
-#                                 continue
-                    
-#                     if not fee_fields_found:
-#                         logger.warning("No fee fields found in Student model")
-#                         # Try to check if there are any payment-related fields
-#                         payment_related_fields = [f for f in student_fields if 'fee' in f.lower() or 'payment' in f.lower() or 'amount' in f.lower()]
-#                         logger.info(f"Payment-related fields found: {payment_related_fields}")
-                
-#                 # Calculate percentage
-#                 percentage = 0
-#                 if fee_expected > 0:
-#                     percentage = round((fee_paid / fee_expected * 100), 2)
-                
-#                 fee_stats['total_expected'] = float(fee_expected)
-#                 fee_stats['total_collected'] = float(fee_paid)
-#                 fee_stats['percentage'] = percentage
-                
-#                 logger.info(f"Fee stats - Expected: {fee_expected}, Collected: {fee_paid}, Percentage: {percentage}%")
-                
-#             except Exception as e:
-#                 logger.error(f"Error getting fee statistics: {str(e)}", exc_info=True)
-#                 # Don't fail the entire dashboard if fee stats fail
-            
-#             # ===========================
-#             # ADDITIONAL STATISTICS
-#             # ===========================
-            
-#             # Get session/term statistics
-#             current_session = None
-#             current_term = None
-#             try:
-#                 from academic.models import AcademicSession, AcademicTerm
-                
-#                 current_session = AcademicSession.objects.filter(is_current=True).first()
-#                 current_term = AcademicTerm.objects.filter(is_current=True).first()
-                
-#                 logger.info(f"Current session: {current_session.name if current_session else 'None'}")
-#                 logger.info(f"Current term: {current_term.name if current_term else 'None'}")
-#             except Exception as e:
-#                 logger.error(f"Error getting session/term info: {str(e)}")
-            
-#             # ===========================
-#             # RECENT REGISTRATIONS
-#             # ===========================
-#             try:
-#                 recent_users = User.objects.all().order_by('-created_at')[:10]
-#                 recent_users_data = UserProfileSerializer(recent_users, many=True).data
-#             except Exception as e:
-#                 logger.error(f"Error getting recent registrations: {str(e)}")
-#                 recent_users_data = []
-            
-#             # ===========================
-#             # BUILD COMPREHENSIVE RESPONSE
-#             # ===========================
-#             response_data = {
-#                 # User statistics
-#                 'total_users': total_users,
-#                 'active_users': active_users,
-#                 'verified_users': verified_users,
-#                 'role_counts': role_counts,
-                
-#                 # Student statistics
-#                 'total_students': total_students,
-#                 'enrolled_students': enrolled_students,
-#                 'enrollment_percentage': round(
-#                     (enrolled_students / total_students * 100) if total_students > 0 else 0,
-#                     2
-#                 ),
-                
-#                 # Parent statistics
-#                 'total_parents': total_parents,
-#                 'registered_parents': registered_parents,
-#                 'parent_coverage': round(
-#                     (registered_parents / total_students * 100) if total_students > 0 else 0,
-#                     2
-#                 ),
-                
-#                 # Staff statistics
-#                 'total_staff': total_staff,
-#                 'teaching_staff': teaching_staff,
-#                 'non_teaching_staff': non_teaching_staff,
-#                 'student_teacher_ratio': round(
-#                     total_students / teaching_staff if teaching_staff > 0 else 0,
-#                     1
-#                 ),
-                
-#                 # Academic statistics
-#                 'total_classes': total_classes,
-#                 'active_classes': active_classes,
-#                 'total_subjects': total_subjects,
-#                 'active_subjects': active_subjects,
-#                 'average_subjects_per_class': round(
-#                     total_subjects / total_classes if total_classes > 0 else 0,
-#                     1
-#                 ),
-                
-#                 # Results statistics
-#                 'results_published': results_published,
-#                 'total_results': total_results,
-#                 'results_percentage': results_percentage,
-                
-#                 # Fee statistics
-#                 'fee_collection': fee_stats,
-                
-#                 # System info
-#                 'current_session': current_session.name if current_session else 'Not set',
-#                 'current_term': current_term.name if current_term else 'Not set',
-#                 'academic_year': current_session.name if current_session else 'Not set',
-                
-#                 # Recent data
-#                 'recent_registrations': recent_users_data,
-#                 'timestamp': timezone.now().isoformat(),
-                
-#                 # Summary statistics
-#                 'summary': {
-#                     'total_entities': total_users + total_students + total_parents + total_staff,
-#                     'active_entities': active_users + enrolled_students + registered_parents + total_staff,
-#                     'overall_activity_percentage': round(
-#                         ((active_users + enrolled_students + registered_parents + total_staff) / 
-#                          (total_users + total_students + total_parents + total_staff) * 100) 
-#                         if (total_users + total_students + total_parents + total_staff) > 0 else 0,
-#                         2
-#                     )
-#                 }
-#             }
-            
-#             logger.info(f"AdminDashboardView: Successfully collected all statistics")
-#             logger.info(f"Response summary - Users: {total_users}, Students: {total_students}, Parents: {total_parents}, Staff: {total_staff}")
-#             logger.info(f"Classes: {total_classes}, Subjects: {total_subjects}, Results: {total_results}, Published: {results_published}")
-#             logger.info(f"Fees - Expected: {fee_stats['total_expected']}, Collected: {fee_stats['total_collected']}, Percentage: {fee_stats['percentage']}%")
-            
-#             return Response(response_data, status=status.HTTP_200_OK)
-            
-#         except Exception as e:
-#             logger.error(f"AdminDashboardView: Critical error - {str(e)}", exc_info=True)
-#             return Response({
-#                 'error': 'Failed to fetch dashboard statistics',
-#                 'detail': str(e),
-#                 'total_users': 0,
-#                 'total_students': 0,
-#                 'total_parents': 0,
-#                 'total_staff': 0,
-#                 'total_classes': 0,
-#                 'total_subjects': 0,
-#                 'results_published': 0,
-#                 'fee_collection': {
-#                     'total_expected': 0,
-#                     'total_collected': 0,
-#                     'percentage': 0,
-#                     'currency': '₦',
-#                     'status': {
-#                         'fully_paid': 0,
-#                         'partial': 0,
-#                         'not_paid': 0,
-#                         'scholarship': 0,
-#                         'exempted': 0,
-#                     }
-#                 }
-#             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class AdminDashboardView(APIView):
     """
@@ -1399,6 +888,131 @@ class AdminDashboardView(APIView):
             # ===========================
             # FEE STATISTICS - CHECKING STUDENT MODEL
             # ===========================
+            # fee_stats = {
+            #     'total_expected': 0,
+            #     'total_collected': 0,
+            #     'percentage': 0,
+            #     'currency': '₦',
+            #     'status': {
+            #         'fully_paid': 0,
+            #         'partial': 0,
+            #         'not_paid': 0,
+            #         'scholarship': 0,
+            #         'exempted': 0,
+            #     }
+            # }
+            
+            # try:
+            #     from students.models import Student
+                
+            #     # Check what fields exist in Student model
+            #     student_fields = [f.name for f in Student._meta.get_fields()]
+            #     logger.info(f"Available Student fields: {', '.join(student_fields)}")
+                
+            #     # Look for fee-related fields
+            #     fee_field_names = {
+            #         'expected': ['fees_expected', 'total_fee', 'fee_amount', 'expected_fee', 'annual_fee'],
+            #         'paid': ['fees_paid', 'paid_amount', 'amount_paid', 'fee_paid', 'paid_fee']
+            #     }
+                
+            #     # Find which fee fields exist
+            #     expected_field = None
+            #     paid_field = None
+                
+            #     for field in fee_field_names['expected']:
+            #         if field in student_fields:
+            #             expected_field = field
+            #             break
+                
+            #     for field in fee_field_names['paid']:
+            #         if field in student_fields:
+            #             paid_field = field
+            #             break
+                
+            #     logger.info(f"Found fee fields - Expected: {expected_field}, Paid: {paid_field}")
+                
+            #     if expected_field and paid_field:
+            #         # Calculate totals
+            #         total_expected = Student.objects.aggregate(
+            #             total=Sum(expected_field)
+            #         )['total'] or 0
+                    
+            #         total_collected = Student.objects.aggregate(
+            #             total=Sum(paid_field)
+            #         )['total'] or 0
+                    
+            #         # Calculate payment status counts
+            #         try:
+            #             # Fully paid: paid >= expected
+            #             fully_paid = Student.objects.annotate(
+            #                 paid_value=Coalesce(F(paid_field), 0),
+            #                 expected_value=Coalesce(F(expected_field), 0)
+            #             ).filter(paid_value__gte=F('expected_value')).count()
+                        
+            #             # Partial paid: paid > 0 and paid < expected
+            #             partial_paid = Student.objects.annotate(
+            #                 paid_value=Coalesce(F(paid_field), 0),
+            #                 expected_value=Coalesce(F(expected_field), 0)
+            #             ).filter(
+            #                 paid_value__gt=0,
+            #                 paid_value__lt=F('expected_value')
+            #             ).count()
+                        
+            #             # Not paid: paid = 0 or null
+            #             not_paid = Student.objects.annotate(
+            #                 paid_value=Coalesce(F(paid_field), 0)
+            #             ).filter(Q(paid_value=0) | Q(**{paid_field: None})).count()
+                        
+            #             # Check for scholarship fields
+            #             scholarship_count = 0
+            #             scholarship_fields = ['has_scholarship', 'scholarship', 'is_scholarship']
+            #             for field_name in scholarship_fields:
+            #                 if field_name in student_fields:
+            #                     scholarship_count = Student.objects.filter(**{field_name: True}).count()
+            #                     break
+                        
+            #             # Check for exemption fields
+            #             exempted_count = 0
+            #             exemption_fields = ['fee_exemption', 'is_exempted', 'exempted']
+            #             for field_name in exemption_fields:
+            #                 if field_name in student_fields:
+            #                     exempted_count = Student.objects.filter(**{field_name: True}).count()
+            #                     break
+                        
+            #             fee_stats['status']['fully_paid'] = fully_paid
+            #             fee_stats['status']['partial'] = partial_paid
+            #             fee_stats['status']['not_paid'] = not_paid
+            #             fee_stats['status']['scholarship'] = scholarship_count
+            #             fee_stats['status']['exempted'] = exempted_count
+                        
+            #         except Exception as calc_error:
+            #             logger.error(f"Error calculating fee statuses: {str(calc_error)}")
+            #             # Set defaults if calculation fails
+            #             fee_stats['status']['not_paid'] = total_students
+                    
+            #         # Calculate percentage
+            #         percentage = 0
+            #         if total_expected > 0:
+            #             percentage = round((total_collected / total_expected * 100), 2)
+                    
+            #         fee_stats['total_expected'] = float(total_expected)
+            #         fee_stats['total_collected'] = float(total_collected)
+            #         fee_stats['percentage'] = percentage
+                    
+            #         logger.info(f"Fee stats - Expected: {total_expected}, Collected: {total_collected}, Percentage: {percentage}%")
+            #     else:
+            #         logger.warning(f"No matching fee fields found in Student model")
+            #         # Set not_paid to total students as default
+            #         fee_stats['status']['not_paid'] = total_students
+                    
+            # except Exception as e:
+            #     logger.error(f"Error getting fee statistics: {str(e)}", exc_info=True)
+            #     # Set not_paid to total students as default
+            #     fee_stats['status']['not_paid'] = total_students
+            
+            # ===========================
+            # FEE STATISTICS - CORRECTED
+            # ===========================
             fee_stats = {
                 'total_expected': 0,
                 'total_collected': 0,
@@ -1412,114 +1026,178 @@ class AdminDashboardView(APIView):
                     'exempted': 0,
                 }
             }
-            
+
             try:
                 from students.models import Student
+                from django.db.models import Q, Sum, F, Value, DecimalField
+                from django.db.models.functions import Coalesce
                 
-                # Check what fields exist in Student model
-                student_fields = [f.name for f in Student._meta.get_fields()]
-                logger.info(f"Available Student fields: {', '.join(student_fields)}")
+                total_students = Student.objects.all().count()
                 
-                # Look for fee-related fields
-                fee_field_names = {
-                    'expected': ['fees_expected', 'total_fee', 'fee_amount', 'expected_fee', 'annual_fee'],
-                    'paid': ['fees_paid', 'paid_amount', 'amount_paid', 'fee_paid', 'paid_fee']
-                }
-                
-                # Find which fee fields exist
-                expected_field = None
-                paid_field = None
-                
-                for field in fee_field_names['expected']:
-                    if field in student_fields:
-                        expected_field = field
-                        break
-                
-                for field in fee_field_names['paid']:
-                    if field in student_fields:
-                        paid_field = field
-                        break
-                
-                logger.info(f"Found fee fields - Expected: {expected_field}, Paid: {paid_field}")
-                
-                if expected_field and paid_field:
-                    # Calculate totals
-                    total_expected = Student.objects.aggregate(
-                        total=Sum(expected_field)
-                    )['total'] or 0
+                # Method 1: Check if there's a Fee model
+                try:
+                    from students.models import Fee
                     
-                    total_collected = Student.objects.aggregate(
-                        total=Sum(paid_field)
-                    )['total'] or 0
+                    # Get payment status from Fee model
+                    fee_status_agg = Fee.objects.aggregate(
+                        total_expected=Coalesce(Sum('amount_expected'), 0),
+                        total_collected=Coalesce(Sum('amount_paid'), 0)
+                    )
                     
-                    # Calculate payment status counts
-                    try:
-                        # Fully paid: paid >= expected
-                        fully_paid = Student.objects.annotate(
-                            paid_value=Coalesce(F(paid_field), 0),
-                            expected_value=Coalesce(F(expected_field), 0)
-                        ).filter(paid_value__gte=F('expected_value')).count()
+                    total_expected = float(fee_status_agg['total_expected'])
+                    total_collected = float(fee_status_agg['total_collected'])
+                    
+                    # Count by fee status
+                    fully_paid = Fee.objects.filter(
+                        amount_paid__gte=F('amount_expected'),
+                        amount_expected__gt=0
+                    ).count()
+                    
+                    partial_paid = Fee.objects.filter(
+                        amount_paid__gt=0,
+                        amount_paid__lt=F('amount_expected'),
+                        amount_expected__gt=0
+                    ).count()
+                    
+                    not_paid = Fee.objects.filter(
+                        Q(amount_paid=0) | Q(amount_paid__isnull=True)
+                    ).count()
+                    
+                    scholarship = Fee.objects.filter(
+                        Q(fee_status='scholarship') | Q(is_scholarship=True)
+                    ).count()
+                    
+                    exempted = Fee.objects.filter(
+                        Q(fee_status='exempted') | Q(is_exempted=True)
+                    ).count()
+                    
+                except ImportError:
+                    # Method 2: Get from Student model directly
+                    # Look for fee fields in Student model
+                    student_fields = [f.name for f in Student._meta.get_fields()]
+                    
+                    # Find which fee fields exist
+                    expected_field = None
+                    paid_field = None
+                    
+                    fee_field_options = {
+                        'expected': ['total_fee_amount', 'total_fee', 'fee_amount', 'expected_fee', 'annual_fee'],
+                        'paid': ['amount_paid', 'paid_amount', 'fee_paid', 'paid_fee']
+                    }
+                    
+                    for field in fee_field_options['expected']:
+                        if field in student_fields:
+                            expected_field = field
+                            break
+                    
+                    for field in fee_field_options['paid']:
+                        if field in student_fields:
+                            paid_field = field
+                            break
+                    
+                    if expected_field and paid_field:
+                        # Calculate totals using Coalesce to handle NULL values
+                        total_expected = Student.objects.aggregate(
+                            total=Coalesce(Sum(expected_field), 0)
+                        )['total'] or 0
                         
-                        # Partial paid: paid > 0 and paid < expected
-                        partial_paid = Student.objects.annotate(
-                            paid_value=Coalesce(F(paid_field), 0),
-                            expected_value=Coalesce(F(expected_field), 0)
+                        total_collected = Student.objects.aggregate(
+                            total=Coalesce(Sum(paid_field), 0)
+                        )['total'] or 0
+                        
+                        # Convert to float
+                        total_expected = float(total_expected)
+                        total_collected = float(total_collected)
+                        
+                        # Calculate payment status counts
+                        # Fully paid: paid >= expected AND expected > 0
+                        fully_paid = Student.objects.annotate(
+                            paid_value=Coalesce(F(paid_field), Value(0)),
+                            expected_value=Coalesce(F(expected_field), Value(0))
                         ).filter(
+                            expected_value__gt=0,
+                            paid_value__gte=F('expected_value')
+                        ).count()
+                        
+                        # Partial paid: paid > 0 AND paid < expected
+                        partial_paid = Student.objects.annotate(
+                            paid_value=Coalesce(F(paid_field), Value(0)),
+                            expected_value=Coalesce(F(expected_field), Value(0))
+                        ).filter(
+                            expected_value__gt=0,
                             paid_value__gt=0,
                             paid_value__lt=F('expected_value')
                         ).count()
                         
-                        # Not paid: paid = 0 or null
+                        # Not paid: paid = 0 OR null
                         not_paid = Student.objects.annotate(
-                            paid_value=Coalesce(F(paid_field), 0)
-                        ).filter(Q(paid_value=0) | Q(**{paid_field: None})).count()
+                            paid_value=Coalesce(F(paid_field), Value(0))
+                        ).filter(
+                            paid_value=0
+                        ).count()
                         
-                        # Check for scholarship fields
-                        scholarship_count = 0
-                        scholarship_fields = ['has_scholarship', 'scholarship', 'is_scholarship']
+                        # Scholarship count - check multiple possible field names
+                        scholarship = 0
+                        scholarship_fields = ['has_scholarship', 'scholarship', 'is_scholarship', 'scholarship_status']
                         for field_name in scholarship_fields:
                             if field_name in student_fields:
-                                scholarship_count = Student.objects.filter(**{field_name: True}).count()
-                                break
+                                scholarship = Student.objects.filter(**{field_name: True}).count()
+                                if scholarship > 0:
+                                    break
                         
-                        # Check for exemption fields
-                        exempted_count = 0
-                        exemption_fields = ['fee_exemption', 'is_exempted', 'exempted']
+                        # If no scholarship field found, you might have a fee_status field
+                        if scholarship == 0 and 'fee_status' in student_fields:
+                            scholarship = Student.objects.filter(fee_status='scholarship').count()
+                        
+                        # Exempted count
+                        exempted = 0
+                        exemption_fields = ['fee_exemption', 'is_exempted', 'exempted', 'fee_status']
                         for field_name in exemption_fields:
                             if field_name in student_fields:
-                                exempted_count = Student.objects.filter(**{field_name: True}).count()
-                                break
+                                if field_name == 'fee_status':
+                                    exempted = Student.objects.filter(fee_status='exempted').count()
+                                else:
+                                    exempted = Student.objects.filter(**{field_name: True}).count()
+                                if exempted > 0:
+                                    break
                         
-                        fee_stats['status']['fully_paid'] = fully_paid
-                        fee_stats['status']['partial'] = partial_paid
-                        fee_stats['status']['not_paid'] = not_paid
-                        fee_stats['status']['scholarship'] = scholarship_count
-                        fee_stats['status']['exempted'] = exempted_count
-                        
-                    except Exception as calc_error:
-                        logger.error(f"Error calculating fee statuses: {str(calc_error)}")
-                        # Set defaults if calculation fails
-                        fee_stats['status']['not_paid'] = total_students
-                    
-                    # Calculate percentage
-                    percentage = 0
-                    if total_expected > 0:
-                        percentage = round((total_collected / total_expected * 100), 2)
-                    
-                    fee_stats['total_expected'] = float(total_expected)
-                    fee_stats['total_collected'] = float(total_collected)
-                    fee_stats['percentage'] = percentage
-                    
-                    logger.info(f"Fee stats - Expected: {total_expected}, Collected: {total_collected}, Percentage: {percentage}%")
-                else:
-                    logger.warning(f"No matching fee fields found in Student model")
-                    # Set not_paid to total students as default
-                    fee_stats['status']['not_paid'] = total_students
-                    
+                    else:
+                        # No fee fields found - mark all as not paid
+                        logger.warning(f"No matching fee fields found in Student model. Available: {student_fields}")
+                        total_expected = 0
+                        total_collected = 0
+                        fully_paid = 0
+                        partial_paid = 0
+                        not_paid = total_students
+                        scholarship = 0
+                        exempted = 0
+                
+                # Calculate percentage
+                percentage = 0
+                if total_expected > 0:
+                    percentage = round((total_collected / total_expected * 100), 2)
+                
+                fee_stats['total_expected'] = total_expected
+                fee_stats['total_collected'] = total_collected
+                fee_stats['percentage'] = percentage
+                fee_stats['status']['fully_paid'] = fully_paid
+                fee_stats['status']['partial'] = partial_paid
+                fee_stats['status']['not_paid'] = not_paid
+                fee_stats['status']['scholarship'] = scholarship
+                fee_stats['status']['exempted'] = exempted
+                
+                logger.info(f"Fee stats - Expected: {total_expected}, Collected: {total_collected}, Percentage: {percentage}%")
+                logger.info(f"Fee status counts - Fully Paid: {fully_paid}, Partial: {partial_paid}, Not Paid: {not_paid}, Scholarship: {scholarship}, Exempted: {exempted}")
+                
             except Exception as e:
                 logger.error(f"Error getting fee statistics: {str(e)}", exc_info=True)
-                # Set not_paid to total students as default
-                fee_stats['status']['not_paid'] = total_students
+                # Default to not paid for all
+                try:
+                    from students.models import Student
+                    total_students = Student.objects.all().count()
+                    fee_stats['status']['not_paid'] = total_students
+                except:
+                    pass
             
             # ===========================
             # ACADEMIC SESSION AND TERM
