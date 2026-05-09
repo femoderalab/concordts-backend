@@ -885,131 +885,7 @@ class AdminDashboardView(APIView):
                     except ImportError:
                         logger.warning("Could not find Result model in results.models")
             
-            # ===========================
-            # FEE STATISTICS - CHECKING STUDENT MODEL
-            # ===========================
-            # fee_stats = {
-            #     'total_expected': 0,
-            #     'total_collected': 0,
-            #     'percentage': 0,
-            #     'currency': '₦',
-            #     'status': {
-            #         'fully_paid': 0,
-            #         'partial': 0,
-            #         'not_paid': 0,
-            #         'scholarship': 0,
-            #         'exempted': 0,
-            #     }
-            # }
-            
-            # try:
-            #     from students.models import Student
-                
-            #     # Check what fields exist in Student model
-            #     student_fields = [f.name for f in Student._meta.get_fields()]
-            #     logger.info(f"Available Student fields: {', '.join(student_fields)}")
-                
-            #     # Look for fee-related fields
-            #     fee_field_names = {
-            #         'expected': ['fees_expected', 'total_fee', 'fee_amount', 'expected_fee', 'annual_fee'],
-            #         'paid': ['fees_paid', 'paid_amount', 'amount_paid', 'fee_paid', 'paid_fee']
-            #     }
-                
-            #     # Find which fee fields exist
-            #     expected_field = None
-            #     paid_field = None
-                
-            #     for field in fee_field_names['expected']:
-            #         if field in student_fields:
-            #             expected_field = field
-            #             break
-                
-            #     for field in fee_field_names['paid']:
-            #         if field in student_fields:
-            #             paid_field = field
-            #             break
-                
-            #     logger.info(f"Found fee fields - Expected: {expected_field}, Paid: {paid_field}")
-                
-            #     if expected_field and paid_field:
-            #         # Calculate totals
-            #         total_expected = Student.objects.aggregate(
-            #             total=Sum(expected_field)
-            #         )['total'] or 0
-                    
-            #         total_collected = Student.objects.aggregate(
-            #             total=Sum(paid_field)
-            #         )['total'] or 0
-                    
-            #         # Calculate payment status counts
-            #         try:
-            #             # Fully paid: paid >= expected
-            #             fully_paid = Student.objects.annotate(
-            #                 paid_value=Coalesce(F(paid_field), 0),
-            #                 expected_value=Coalesce(F(expected_field), 0)
-            #             ).filter(paid_value__gte=F('expected_value')).count()
-                        
-            #             # Partial paid: paid > 0 and paid < expected
-            #             partial_paid = Student.objects.annotate(
-            #                 paid_value=Coalesce(F(paid_field), 0),
-            #                 expected_value=Coalesce(F(expected_field), 0)
-            #             ).filter(
-            #                 paid_value__gt=0,
-            #                 paid_value__lt=F('expected_value')
-            #             ).count()
-                        
-            #             # Not paid: paid = 0 or null
-            #             not_paid = Student.objects.annotate(
-            #                 paid_value=Coalesce(F(paid_field), 0)
-            #             ).filter(Q(paid_value=0) | Q(**{paid_field: None})).count()
-                        
-            #             # Check for scholarship fields
-            #             scholarship_count = 0
-            #             scholarship_fields = ['has_scholarship', 'scholarship', 'is_scholarship']
-            #             for field_name in scholarship_fields:
-            #                 if field_name in student_fields:
-            #                     scholarship_count = Student.objects.filter(**{field_name: True}).count()
-            #                     break
-                        
-            #             # Check for exemption fields
-            #             exempted_count = 0
-            #             exemption_fields = ['fee_exemption', 'is_exempted', 'exempted']
-            #             for field_name in exemption_fields:
-            #                 if field_name in student_fields:
-            #                     exempted_count = Student.objects.filter(**{field_name: True}).count()
-            #                     break
-                        
-            #             fee_stats['status']['fully_paid'] = fully_paid
-            #             fee_stats['status']['partial'] = partial_paid
-            #             fee_stats['status']['not_paid'] = not_paid
-            #             fee_stats['status']['scholarship'] = scholarship_count
-            #             fee_stats['status']['exempted'] = exempted_count
-                        
-            #         except Exception as calc_error:
-            #             logger.error(f"Error calculating fee statuses: {str(calc_error)}")
-            #             # Set defaults if calculation fails
-            #             fee_stats['status']['not_paid'] = total_students
-                    
-            #         # Calculate percentage
-            #         percentage = 0
-            #         if total_expected > 0:
-            #             percentage = round((total_collected / total_expected * 100), 2)
-                    
-            #         fee_stats['total_expected'] = float(total_expected)
-            #         fee_stats['total_collected'] = float(total_collected)
-            #         fee_stats['percentage'] = percentage
-                    
-            #         logger.info(f"Fee stats - Expected: {total_expected}, Collected: {total_collected}, Percentage: {percentage}%")
-            #     else:
-            #         logger.warning(f"No matching fee fields found in Student model")
-            #         # Set not_paid to total students as default
-            #         fee_stats['status']['not_paid'] = total_students
-                    
-            # except Exception as e:
-            #     logger.error(f"Error getting fee statistics: {str(e)}", exc_info=True)
-            #     # Set not_paid to total students as default
-            #     fee_stats['status']['not_paid'] = total_students
-            
+                      
             # ===========================
             # FEE STATISTICS - CORRECTED
             # ===========================
@@ -1097,12 +973,14 @@ class AdminDashboardView(APIView):
                     
                     if expected_field and paid_field:
                         # Calculate totals using Coalesce to handle NULL values
+                        from django.db.models import DecimalField as DjDecimalField
+
                         total_expected = Student.objects.aggregate(
-                            total=Coalesce(Sum(expected_field), 0)
+                            total=Coalesce(Sum(expected_field), Value(0), output_field=DjDecimalField())
                         )['total'] or 0
-                        
+
                         total_collected = Student.objects.aggregate(
-                            total=Coalesce(Sum(paid_field), 0)
+                            total=Coalesce(Sum(paid_field), Value(0), output_field=DjDecimalField())
                         )['total'] or 0
                         
                         # Convert to float
@@ -1269,6 +1147,15 @@ class AdminDashboardView(APIView):
                 # Fee statistics
                 'fee_collection': fee_stats,
                 
+                'paymentPercentage': fee_stats['percentage'],
+                'totalAmountExpected': fee_stats['total_expected'],
+                'totalAmountPaid': fee_stats['total_collected'],
+                'totalPaidFull': fee_stats['status']['fully_paid'],
+                'totalPaidPartial': fee_stats['status']['partial'],
+                'totalNotPaid': fee_stats['status']['not_paid'],
+                'totalScholarship': fee_stats['status']['scholarship'],
+                'totalExempted': fee_stats['status']['exempted'],
+                
                 # Academic info
                 'current_session': current_session_name,
                 'current_term': current_term_name,
@@ -1404,11 +1291,12 @@ class ActivityViewSet(viewsets.ModelViewSet):
         if activity_type:
             queryset = queryset.filter(activity_type=activity_type)
         
+        total_count = queryset.count()
         activities = queryset[:limit]
         serializer = self.get_serializer(activities, many=True)
-        
+
         return Response({
-            'count': activities.count(),
+            'count': total_count,
             'activities': serializer.data,
             'timestamp': timezone.now().isoformat()
         })

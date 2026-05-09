@@ -640,9 +640,26 @@ class StudentViewSet(viewsets.ViewSet):
                 # =====================
                 if student_updated:
                     student.updated_at = timezone.now()
-                    # CRITICAL: Save without validation
                     student.save()
-                    logger.info(f"✅ Student saved")
+                    logger.info(f"Student saved")
+
+                    # Log activity
+                    try:
+                        from users.models import Activity
+                        Activity.objects.create(
+                            activity_type='student_updated',
+                            action='Updated student record',
+                            description=f"{request.user.get_full_name()} updated student {student.user.get_full_name()} ({student.admission_number})",
+                            user=request.user,
+                            user_name=request.user.get_full_name(),
+                            user_role=request.user.role,
+                            target_type='student',
+                            target_id=str(student.id),
+                            target_name=student.user.get_full_name(),
+                            is_system=False,
+                        )
+                    except Exception as log_err:
+                        logger.warning(f"⚠ Could not log activity: {log_err}")
                 
                 # =====================
                 # PREPARE RESPONSE
