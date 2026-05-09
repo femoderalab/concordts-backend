@@ -972,72 +972,47 @@ class AdminDashboardView(APIView):
                             break
                     
                     if expected_field and paid_field:
-                        # Calculate totals using Coalesce to handle NULL values
-                        from django.db.models import DecimalField as DjDecimalField
+                        from decimal import Decimal
+                        from django.db.models import DecimalField as DjDecField
 
-                        total_expected = Student.objects.aggregate(
-                            total=Coalesce(Sum(expected_field), Value(0), output_field=DjDecimalField())
-                        )['total'] or 0
+                        # Calculate totals - use direct Sum without Coalesce
+                        agg_expected = Student.objects.aggregate(
+                            total=Sum(expected_field)
+                        )['total']
+                        agg_collected = Student.objects.aggregate(
+                            total=Sum(paid_field)
+                        )['total']
 
-                        total_collected = Student.objects.aggregate(
-                            total=Coalesce(Sum(paid_field), Value(0), output_field=DjDecimalField())
-                        )['total'] or 0
-                        
-                        # Convert to float
-                        total_expected = float(total_expected)
-                        total_collected = float(total_collected)
+                        total_expected = float(agg_expected or 0)
+                        total_collected = float(agg_collected or 0)
                         
                         # Calculate payment status counts
                         # Fully paid: paid >= expected AND expected > 0
-                        fully_paid = Student.objects.annotate(
-                            paid_value=Coalesce(F(paid_field), Value(0)),
-                            expected_value=Coalesce(F(expected_field), Value(0))
-                        ).filter(
-                            expected_value__gt=0,
-                            paid_value__gte=F('expected_value')
+                        from decimal import Decimal
+
+                        # Fully paid: use fee_status field directly
+                        fully_paid = Student.objects.filter(
+                            fee_status='paid_full'
                         ).count()
-                        
-                        # Partial paid: paid > 0 AND paid < expected
-                        partial_paid = Student.objects.annotate(
-                            paid_value=Coalesce(F(paid_field), Value(0)),
-                            expected_value=Coalesce(F(expected_field), Value(0))
-                        ).filter(
-                            expected_value__gt=0,
-                            paid_value__gt=0,
-                            paid_value__lt=F('expected_value')
+
+                        # Partial paid
+                        partial_paid = Student.objects.filter(
+                            fee_status='paid_partial'
                         ).count()
-                        
-                        # Not paid: paid = 0 OR null
-                        not_paid = Student.objects.annotate(
-                            paid_value=Coalesce(F(paid_field), Value(0))
-                        ).filter(
-                            paid_value=0
+
+                        # Not paid
+                        not_paid = Student.objects.filter(
+                            fee_status='not_paid'
                         ).count()
                         
                         # Scholarship count - check multiple possible field names
-                        scholarship = 0
-                        scholarship_fields = ['has_scholarship', 'scholarship', 'is_scholarship', 'scholarship_status']
-                        for field_name in scholarship_fields:
-                            if field_name in student_fields:
-                                scholarship = Student.objects.filter(**{field_name: True}).count()
-                                if scholarship > 0:
-                                    break
-                        
-                        # If no scholarship field found, you might have a fee_status field
-                        if scholarship == 0 and 'fee_status' in student_fields:
-                            scholarship = Student.objects.filter(fee_status='scholarship').count()
-                        
-                        # Exempted count
-                        exempted = 0
-                        exemption_fields = ['fee_exemption', 'is_exempted', 'exempted', 'fee_status']
-                        for field_name in exemption_fields:
-                            if field_name in student_fields:
-                                if field_name == 'fee_status':
-                                    exempted = Student.objects.filter(fee_status='exempted').count()
-                                else:
-                                    exempted = Student.objects.filter(**{field_name: True}).count()
-                                if exempted > 0:
-                                    break
+                        scholarship = Student.objects.filter(
+                            fee_status='scholarship'
+                        ).count()
+
+                        exempted = Student.objects.filter(
+                            fee_status='exempted'
+                        ).count()
                         
                     else:
                         # No fee fields found - mark all as not paid
